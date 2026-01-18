@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>글 변환기</title>
+    <style>
+      /* ✨ 리디바탕 폰트 (Toast2 스타일) */
+      @font-face {
+        font-family: "Ridibatang";
+        src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff")
+          format("woff");
+        font-weight: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --bg-color: #fcfcfc;
+        --text-color: #333;
+        --header-bg: #fff;
+        --border-color: #ddd;
+        --input-bg: #fff;
+        --accent-color: #dcb085; /* 빵 색상 */
+        --btn-bg: #f0f0f0;
+        --btn-hover: #e0e0e0;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        --modal-bg: rgba(0, 0, 0, 0.4);
+      }
+
+      body.dark {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --header-bg: #222;
+        --border-color: #444;
+        --input-bg: #2a2a2a;
+        --accent-color: #a68b6c;
+        --btn-bg: #333;
+        --btn-hover: #444;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --modal-bg: rgba(0, 0, 0, 0.7);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Ridibatang", serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      /* 헤더 */
+      header {
+        height: 60px;
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-controls {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        background: var(--btn-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: "Ridibatang", serif;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+
+      button:hover {
+        background: var(--btn-hover);
+      }
+
+      /* 빵 아이덴티티 버튼 */
+      #breadBtn {
+        font-size: 1.2rem;
+        padding: 4px 8px;
+        background: transparent;
+        border: none;
+      }
+      #breadBtn:hover {
+        transform: scale(1.1);
+        background: transparent;
+      }
+
+      /* 메인 레이아웃 */
+      main {
+        flex: 1;
+        display: flex;
+        padding: 10px;
+        gap: 10px;
+        overflow: hidden;
+      }
+
+      .panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--header-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        position: relative;
+      }
+
+      .panel-header {
+        padding: 10px 15px;
+        background: var(--btn-bg);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.9rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .panel-content {
+        flex: 1;
+        position: relative;
+      }
+
+      textarea {
+        width: 100%;
+        height: 100%;
+        border: none;
+        resize: none;
+        padding: 15px;
+        font-family: "Ridibatang", serif;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        background: var(--input-bg);
+        color: var(--text-color);
+        outline: none;
+      }
+
+      textarea::-webkit-scrollbar {
+        width: 8px;
+      }
+      textarea::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      textarea::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 4px;
+      }
+
+      /* 모바일 대응 */
+      @media (max-width: 768px) {
+        main {
+          flex-direction: column;
+        }
+        header {
+          padding: 0 15px;
+        }
+        .header-controls button span {
+          display: none;
+        }
+      }
+
+      /* 설정 모달 */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--modal-bg);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .modal-overlay.open {
+        display: flex;
+        opacity: 1;
+      }
+
+      .modal-window {
+        background: var(--header-bg);
+        width: 90%;
+        max-width: 400px;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        max-height: 80vh;
+        overflow: hidden;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .rule-list {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 15px;
+        padding-right: 5px;
+      }
+
+      .rule-item {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+        align-items: center;
+      }
+
+      .rule-item input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--input-bg);
+        color: var(--text-color);
+        border-radius: 4px;
+        font-family: "Ridibatang", serif;
+        min-width: 0;
+      }
+
+      .fixed-rule {
+        padding: 8px;
+        background: var(--btn-bg);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #888;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 5px;
+        width: 100%;
+      }
+
+      .input-group input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-family: "Ridibatang";
+        background: var(--input-bg);
+        color: var(--text-color);
+      }
+
+      .quick-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-bottom: 10px;
+        margin-top: 5px;
+      }
+      .quick-btn {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        background: var(--bg-color);
+        border: 1px solid var(--accent-color);
+        color: var(--text-color);
+      }
+
+      #addRuleBtn {
+        width: 100%;
+        background: var(--accent-color);
+        color: #fff;
+        border: none;
+        padding: 10px;
+      }
+
+      /* 토스트 팝업 */
+      #toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translate(-50%, 20px);
+        background: rgba(50, 50, 50, 0.9);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-size: 0.9rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        z-index: 200;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: max-content;
+        max-width: 90%;
+      }
+      #toast.show {
+        transform: translate(-50%, 0);
+        opacity: 1;
+        visibility: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 헤더 -->
+    <header>
+      <h1>
+        <button id="breadBtn" title="ToastOut 홈페이지로 이동">🍞</button>
+        <span>글 변환기</span>
+      </h1>
+      <div class="header-controls">
+        <button id="settingBtn" title="키워드 설정">
+          ⚙️ <span>설정</span>
+        </button>
+        <button id="toggleDarkBtn" title="다크 모드">🌗</button>
+      </div>
+    </header>
+
+    <!-- 메인 컨텐츠 -->
+    <main>
+      <!-- 입력 패널 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>입력 (Input)</span>
+          <div class="header-controls" style="gap: 4px">
+            <button
+              id="spellBtn"
+              title="맞춤법 검사"
+              style="color: var(--text-color)"
+            >
+              🔍 맞춤법
+            </button>
+            <button id="copyInputBtn" title="입력 내용 복사">📑 복사</button>
+            <button id="clearBtn" title="지우기" style="color: #ff6b6b">
+              🗑️
+            </button>
+          </div>
+        </div>
+        <div class="panel-content">
+          <textarea
+            id="inputText"
+            placeholder="여기에 글을 작성하세요.&#13;&#10;유저, 펠시, 펠소 → {{user}}&#13;&#10;캐릭터, 펠남, 펠녀 → {{char}}&#13;&#10;자동으로 변환됩니다."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 출력 패널 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>결과 (Output)</span>
+          <button id="copyOutputBtn" title="결과 복사">✨ 복사</button>
+        </div>
+        <div class="panel-content">
+          <textarea
+            id="outputText"
+            readonly
+            placeholder="변환된 텍스트가 실시간으로 나타납니다."
+          ></textarea>
+        </div>
+      </div>
+    </main>
+
+    <!-- 설정 모달 -->
+    <div class="modal-overlay" id="settingModal">
+      <div class="modal-window">
+        <div class="modal-header">
+          <h3 style="margin: 0">단어 변환 설정</h3>
+          <button
+            id="closeModal"
+            style="border: none; background: transparent; font-size: 1.2rem"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="rule-list">
+          <div class="fixed-rule">
+            <span>유저, 펠시, 펠소</span>
+            <strong>→ {{user}}</strong>
+          </div>
+          <div class="fixed-rule">
+            <span>캐릭터, 펠남, 펠녀</span>
+            <strong>→ {{char}}</strong>
+          </div>
+          <hr
+            style="
+              border: 0;
+              border-top: 1px solid var(--border-color);
+              margin: 15px 0;
+            "
+          />
+          <div id="customRuleContainer">
+            <!-- 커스텀 룰이 여기에 추가됨 -->
+          </div>
+        </div>
+
+        <!-- 새 규칙 추가 영역 -->
+        <div style="display: flex; flex-direction: column; width: 100%">
+          <div class="input-group">
+            <input type="text" id="newKey" placeholder="단어 (예: 검)" />
+            <input type="text" id="newVal" placeholder="결과" />
+          </div>
+          <div class="quick-actions">
+            <button class="quick-btn" onclick="fillVal('{{user}}')">
+              + {{user}}
+            </button>
+            <button class="quick-btn" onclick="fillVal('{{char}}')">
+              + {{char}}
+            </button>
+          </div>
+          <button id="addRuleBtn">+ 규칙 추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toast">✅ 클립보드에 복사되었습니다.</div>
+
+    <script>
+      // DOM 요소
+      const inputText = document.getElementById("inputText");
+      const outputText = document.getElementById("outputText");
+      const settingBtn = document.getElementById("settingBtn");
+      const settingModal = document.getElementById("settingModal");
+      const closeModal = document.getElementById("closeModal");
+      const customRuleContainer = document.getElementById(
+        "customRuleContainer",
+      );
+      const newKey = document.getElementById("newKey");
+      const newVal = document.getElementById("newVal");
+      const toast = document.getElementById("toast");
+      const spellBtn = document.getElementById("spellBtn");
+
+      // 상태 변수
+      const defaultRules = [
+        { targets: ["유저", "펠시", "펠소"], replace: "{{user}}" },
+        { targets: ["캐릭터", "펠남", "펠녀"], replace: "{{char}}" },
+      ];
+      let customRules =
+        JSON.parse(localStorage.getItem("toast_custom_rules")) || [];
+
+      // 초기화
+      function init() {
+        // 다크모드 확인
+        if (localStorage.getItem("toast_darkmode") === "true") {
+          document.body.classList.add("dark");
+        }
+
+        // 저장된 텍스트 확인
+        const savedText = localStorage.getItem("toast_input_text");
+        if (savedText) {
+          inputText.value = savedText;
+          convert();
+        }
+
+        renderRules();
+      }
+
+      // 정규식 이스케이프
+      function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      // 텍스트 변환 핵심 로직
+      function convert() {
+        let text = inputText.value;
+
+        // 1. 커스텀 룰 적용
+        customRules.forEach((rule) => {
+          if (rule.key && rule.val) {
+            const regex = new RegExp(escapeRegExp(rule.key), "g");
+            text = text.replace(regex, rule.val);
+          }
+        });
+
+        // 2. 기본 룰 적용
+        defaultRules.forEach((rule) => {
+          rule.targets.forEach((target) => {
+            const regex = new RegExp(escapeRegExp(target), "g");
+            text = text.replace(regex, rule.replace);
+          });
+        });
+
+        outputText.value = text;
+        localStorage.setItem("toast_input_text", inputText.value);
+      }
+
+      // 설정창 렌더링
+      function renderRules() {
+        customRuleContainer.innerHTML = "";
+        if (customRules.length === 0) {
+          customRuleContainer.innerHTML =
+            '<div style="text-align:center; color:#888; padding:10px; font-size:0.9rem;">추가된 규칙이 없습니다.</div>';
+          return;
+        }
+
+        customRules.forEach((rule, idx) => {
+          const div = document.createElement("div");
+          div.className = "rule-item";
+          div.innerHTML = `
+                    <input type="text" value="${rule.key}" readonly style="background:var(--btn-bg); color:var(--text-color);">
+                    <span style="color:var(--border-color)">→</span>
+                    <input type="text" value="${rule.val}" readonly style="background:var(--btn-bg); color:var(--text-color); font-weight:bold;">
+                    <button onclick="removeRule(${idx})" style="padding:8px; color:#ff6b6b; border:none; background:transparent;">✕</button>
+                `;
+          customRuleContainer.appendChild(div);
+        });
+      }
+
+      // 규칙 추가
+      document.getElementById("addRuleBtn").addEventListener("click", () => {
+        const key = newKey.value.trim();
+        const val = newVal.value.trim();
+
+        if (!key || !val) {
+          showToast("❌ 단어와 결과를 모두 입력하세요.");
+          return;
+        }
+
+        customRules.push({ key, val });
+        localStorage.setItem("toast_custom_rules", JSON.stringify(customRules));
+
+        newKey.value = "";
+        newVal.value = "";
+        renderRules();
+        convert();
+        newKey.focus();
+      });
+
+      // 빠른 입력
+      window.fillVal = function (val) {
+        newVal.value = val;
+        newVal.focus();
+      };
+
+      // 규칙 삭제
+      window.removeRule = function (idx) {
+        customRules.splice(idx, 1);
+        localStorage.setItem("toast_custom_rules", JSON.stringify(customRules));
+        renderRules();
+        convert();
+      };
+
+      // 토스트 알림
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => {
+          toast.classList.remove("show");
+        }, 2000);
+      }
+
+      // 복사 기능
+      function copyText(text, msg) {
+        if (!text) return;
+        return navigator.clipboard
+          .writeText(text)
+          .then(() => showToast(msg))
+          .catch(() => {
+            // Fallback
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            showToast(msg);
+          });
+      }
+
+      // 맞춤법 검사
+      spellBtn.addEventListener("click", () => {
+        const text = inputText.value;
+        if (!text) {
+          showToast("❌ 검사할 내용이 없습니다.");
+          return;
+        }
+
+        // 복사 후 이동
+        copyText(text, "✅ 내용 복사 완료! 붙여넣기 하세요.").then(() => {
+          window.open("https://nara-speller.co.kr/speller", "_blank");
+        });
+      });
+
+      // 이벤트 리스너들
+      inputText.addEventListener("input", convert);
+
+      document.getElementById("copyInputBtn").addEventListener("click", () => {
+        copyText(inputText.value, "✅ 원본 내용이 복사되었습니다.");
+      });
+
+      document.getElementById("copyOutputBtn").addEventListener("click", () => {
+        copyText(outputText.value, "✅ 변환된 내용이 복사되었습니다.");
+      });
+
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        if (confirm("모든 내용을 지우시겠습니까?")) {
+          inputText.value = "";
+          convert();
+        }
+      });
+
+      // 설정창 열기/닫기
+      settingBtn.addEventListener("click", () => {
+        settingModal.classList.add("open");
+        renderRules();
+      });
+
+      closeModal.addEventListener("click", () =>
+        settingModal.classList.remove("open"),
+      );
+      settingModal.addEventListener("click", (e) => {
+        if (e.target === settingModal) settingModal.classList.remove("open");
+      });
+
+      // 빵 아이덴티티 링크
+      document.getElementById("breadBtn").addEventListener("click", () => {
+        window.location.href = "https://toastout.github.io/toast/";
+      });
+
+      // 다크모드 토글
+      document.getElementById("toggleDarkBtn").addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        localStorage.setItem(
+          "toast_darkmode",
+          document.body.classList.contains("dark"),
+        );
+      });
+
+      // 엔터키로 규칙 추가
+      newVal.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") document.getElementById("addRuleBtn").click();
+      });
+
+      // 시작
+      init();
+    </script>
+  </body>
+</html>
